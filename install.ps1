@@ -1,0 +1,42 @@
+services:
+  openclaw-gateway:
+    image: ghcr.io/phioranex/openclaw-docker:latest
+    container_name: openclaw-gateway
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    # Uncomment the following line if running on Synology NAS or other systems with UID/GID issues
+    # user: "1000:1000"
+    volumes:
+      - ~/.openclaw:/home/node/.openclaw
+      - ~/.openclaw/workspace:/home/node/.openclaw/workspace
+    ports:
+      - "18789:18789"
+      - "18790:18790"
+    environment:
+      - NODE_ENV=production
+      - OPENCLAW_SKIP_SERVICE_CHECK=true
+    command: ["gateway"]
+  
+  socat-proxy:
+    image: alpine/socat
+    container_name: openclaw-socat
+    restart: unless-stopped
+    network_mode: "service:openclaw-gateway"
+    command: "TCP-LISTEN:18790,fork,bind=0.0.0.0,reuseaddr TCP:127.0.0.1:18789"
+
+  openclaw-cli:
+    image: ghcr.io/phioranex/openclaw-docker:latest
+    container_name: openclaw-cli
+    stdin_open: true
+    tty: true
+    # Uncomment the following line if running on Synology NAS or other systems with UID/GID issues
+    # user: "1000:1000"
+    volumes:
+      - ~/.openclaw:/home/node/.openclaw
+      - ~/.openclaw/workspace:/home/node/.openclaw/workspace
+    environment:
+      - NODE_ENV=production
+    entrypoint: ["node", "/app/dist/index.js"]
+    profiles:
+      - cli
